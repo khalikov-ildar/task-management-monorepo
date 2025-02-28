@@ -1,0 +1,155 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./my.db"
+}
+
+model Role {
+  id   String @id
+  name String
+  User User[]
+}
+
+model User {
+  id     String @id
+  roleId String @map("role_id")
+
+  username         String
+  email            String  @unique
+  password         String
+  isEmailConfirmed Boolean
+
+  role Role @relation(fields: [roleId], references: [id])
+
+  ownedTasks          Task[]
+  files               File[]
+  solutions           Solution[]
+  reviews             Review[]
+  refreshTokens       RefreshToken[]
+  passwordResetTokens PasswordResetToken[]
+
+  assignedTasks UserTaskAssignment[]
+  emailToken    EmailToken?
+
+  @@index([email])
+}
+
+model Task {
+  id      String @id
+  ownerId String @map("owner_id")
+
+  title       String
+  description String
+  priority    String
+  deadline    DateTime
+
+  status    String
+  changedAt DateTime? @map("changed_at")
+
+  owner User @relation(fields: [ownerId], references: [id])
+
+  solutions Solution[]
+  assignees UserTaskAssignment[]
+}
+
+model UserTaskAssignment {
+  user   User   @relation(fields: [userId], references: [id])
+  userId String @map("user_id")
+  task   Task   @relation(fields: [taskId], references: [id])
+  taskId String @map("task_id")
+
+  @@id([userId, taskId])
+  @@index([userId])
+}
+
+model File {
+  id         String  @id
+  userId     String
+  fileLinkId String  @unique
+  solutionId String?
+
+  name String
+  etag String
+
+  link     FileLink  @relation(fields: [fileLinkId], references: [id])
+  uploader User      @relation(fields: [userId], references: [id])
+  solution Solution?
+}
+
+model FileLink {
+  id     String  @id
+  userId String
+  link   String
+  isUsed Boolean
+  File   File?
+}
+
+model Solution {
+  id     String  @id
+  userId String
+  taskId String
+  fileId String? @unique
+
+  status            String
+  additionalDetails String?
+  Review            Review?
+  file              File?   @relation(fields: [fileId], references: [id])
+  task              Task    @relation(fields: [taskId], references: [id])
+  creator           User    @relation(fields: [userId], references: [id])
+
+  createdAt DateTime
+}
+
+model Review {
+  id         String @id
+  solutionId String @unique
+  reviewerId String
+
+  status   String
+  feedback String?
+
+  solution Solution @relation(fields: [solutionId], references: [id])
+  reviewer User     @relation(fields: [reviewerId], references: [id])
+
+  createdAt DateTime
+}
+
+model RefreshToken {
+  id        String    @id
+  userId    String    @map("user_id")
+  token     String
+  isRevoked Boolean   @map("is_revoked")
+  revokedAt DateTime? @map("revoked_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  User User @relation(fields: [userId], references: [id])
+}
+
+model EmailToken {
+  id        String @id
+  userId    String @unique @map("user_id")
+  userEmail String @unique @map("user_email")
+  token     String
+
+  User User @relation(fields: [userId], references: [id])
+}
+
+model PasswordResetToken {
+  id     String @id
+  userId String @map("user_id")
+
+  token  String
+  isUsed Boolean
+  usedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id])
+}
