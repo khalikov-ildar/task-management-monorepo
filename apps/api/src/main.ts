@@ -1,7 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app/app.module';
 import { LoggerService, ValidationPipe } from '@nestjs/common';
-import { ILogger } from './application/common/services/i-logger';
+import { ILogger } from '@app/shared';
 import { RMQConnectionFactory } from './app/microservices/rmq.microservice';
 import { NestFactoryStatic } from '@nestjs/core/nest-factory';
 

@@ -1,5 +1,5 @@
 import { CallHandler, ExecutionContext, Injectable, NestInterceptor } from '@nestjs/common';
-import { CustomError } from 'apps/api/src/domain/common/error/custom-error';
+import { CustomError } from '../../../domain/common/error/custom-error';
 import { Result } from 'neverthrow';
 import { Observable, map, catchError, throwError } from 'rxjs';
 import { ErrorMapper } from '../../../presentation/common/mappers/error-mapper';

@@ -1,7 +1,7 @@
 import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
 import { TokenType } from '../../../application/auth/dtos/token-type';
 import { IAuthenticationTokenProvider } from '../../../application/auth/services/i-auth-token.provider';
-import { ILogger } from '../../../application/common/services/i-logger';
+import { ILogger } from '@app/shared';
 import { AlsProvider } from '../../common/services/async-local-storage/als.provider';
 import { Request } from 'express';
 

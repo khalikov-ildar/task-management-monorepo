@@ -1,14 +1,20 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MailerModule } from './mailer/mailer.module';
+import { LoggerModule } from './logger/logger.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Inbox } from './inbox/models/inbox';
+import { Inbox } from './inbox/inbox';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, envFilePath: 'envs/.env.worker' }),
+    TypeOrmModule.forRoot({
+      type: 'sqlite',
+      entities: [Inbox],
+      synchronize: true,
+      database: 'worker.db',
+    }),
     MailerModule.forRootAsync({
-      imports: [TypeOrmModule.forFeature([Inbox])],
       useFactory: (config: ConfigService) => ({
         auth: {
           user: config.getOrThrow('MAILER_USER'),
@@ -21,16 +27,7 @@ import { Inbox } from './inbox/models/inbox';
       }),
       inject: [ConfigService],
     }),
-    TypeOrmModule.forRootAsync({
-      inject: [ConfigService],
-      useFactory: () => ({
-        // TODO: Use config service
-        type: 'sqlite',
-        database: './worker.db',
-        entities: [Inbox],
-        synchronize: true,
-      }),
-    }),
+    LoggerModule,
   ],
 })
 export class AppModule {}

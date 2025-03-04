@@ -1,7 +1,6 @@
 import { UUID } from 'node:crypto';
 import { CustomError } from '../../common/error/custom-error';
 import { UserRoles } from '../../entities/user/user-roles';
-import { TaskStatuses } from '../../value-objects/task-status';
 
 export class TaskErrors {
   public static userIsAlreadyAssignedToTask(userId: UUID): CustomError {
@@ -39,12 +38,8 @@ export class TaskErrors {
     return new CustomError('Validation', 'The deadline of task is over. Task status set to expired');
   }
 
-  public static taskPriorityCanBeChangedOnlyOnPendingTasks(currentStatus: TaskStatuses): CustomError {
-    return new CustomError('Validation', `Task priority can be changed only on pending tasks, the task's status is ${currentStatus}`);
-  }
-
   public static taskStatusIsNotPending(): CustomError {
-    return new CustomError('Validation', 'The task status must be "pending" to mark it as completed');
+    return new CustomError('Validation', 'This action can be done only on pending tasks');
   }
 
   public static taskStatusIsNotOnReview(): CustomError {

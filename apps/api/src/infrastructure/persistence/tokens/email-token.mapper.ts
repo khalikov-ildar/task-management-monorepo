@@ -1,5 +1,5 @@
 import { EmailToken as OrmToken } from '@prisma/client';
-import { EmailVerificationToken } from 'apps/api/src/domain/entities/tokens/email-verification-token';
+import { EmailVerificationToken } from '../../../domain/entities/tokens/email-verification-token';
 import { UUID } from 'node:crypto';
 
 export class EmailTokenMapper {

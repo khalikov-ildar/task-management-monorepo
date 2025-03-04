@@ -19,9 +19,10 @@ import { APP_GUARD } from '@nestjs/core';
 import { AuthGuard } from '../guards/auth.guard';
 import { ICookieManager } from '../../../presentation/common/services/cookie-manager/i-cookie-manager';
 import { CookieManager } from '../../../presentation/common/services/cookie-manager/cookie-manager';
-import { IEmailTokenProvider } from 'apps/api/src/application/auth/services/i-email-token.provider';
-import { IEmailTokenRepository } from 'apps/api/src/domain/repositories/tokens/i-email-token.repository';
+import { IEmailTokenProvider } from '../../../application/auth/services/i-email-token.provider';
+import { IEmailTokenRepository } from '../../../domain/repositories/tokens/i-email-token.repository';
 import { EmailTokenRepository } from '../../persistence/tokens/email-token.repository';
+import { AuthController } from 'apps/api/src/presentation/auth/auth.controller';
 
 @Module({
   imports: [
@@ -50,5 +51,6 @@ import { EmailTokenRepository } from '../../persistence/tokens/email-token.repos
     { provide: APP_GUARD, useClass: AuthGuard },
   ],
   exports: [IPasswordHasher],
+  controllers: [AuthController],
 })
 export class AuthModule {}

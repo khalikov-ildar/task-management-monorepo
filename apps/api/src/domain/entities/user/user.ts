@@ -3,8 +3,6 @@ import { Role } from './role/role';
 import { Task } from '../task/task';
 import { Solution } from '../solution/solution';
 import { Review } from '../review/review';
-import { RefreshToken } from '../tokens/refresh-token';
-import { PasswordResetToken } from '../tokens/password-reset-token';
 import { File } from '../file/file';
 
 export class User {
@@ -22,8 +20,6 @@ export class User {
     public solutions: Solution[] = [],
     public files: File[] = [],
     public reviews: Review[] = [],
-    public refreshTokens: RefreshToken[] = [],
-    public passwordResetTokens: PasswordResetToken[] = [],
   ) {
     this.id = id ?? randomUUID();
   }

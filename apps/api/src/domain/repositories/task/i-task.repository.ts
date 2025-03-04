@@ -6,8 +6,8 @@ import { PaginatedResult } from '../../common/repository/paginated-result';
 
 export abstract class ITaskRepository {
   abstract getById(id: UUID, tx?: any): Promise<Task | null>;
-  abstract getOwned<T extends Query<Task, 'owner'>>(query: T, tx?: any): Promise<PaginatedResult<TaskSummary>>;
-  abstract getAssigned<T extends Query<Task, 'assignees'>>(query: T, tx?: any): Promise<PaginatedResult<TaskSummary>>;
+  abstract getOwned<T extends Query<Task>>(query: T, tx?: any): Promise<PaginatedResult<TaskSummary>>;
+  abstract getAssigned<T extends Query<Task>>(query: T, tx?: any): Promise<PaginatedResult<TaskSummary>>;
   abstract create(task: Task, tx: any): Promise<void>;
   abstract update(task: Task, tx: any): Promise<void>;
   abstract updateStatus(task: Task, tx?: any): Promise<void>;

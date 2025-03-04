@@ -1,6 +1,6 @@
 import { Provider } from '@nestjs/common';
 import { ICurrentUserProvider } from '../../../application/common/services/i-current-user.provider';
-import { ILogger } from '../../../application/common/services/i-logger';
+import { ILogger } from '@app/shared';
 import { ITransactionManager } from '../../../application/common/services/i-transaction.manager';
 import { ChangeTaskPriorityUseCase } from '../../../application/task/use-cases/change-priority/change-task-priority.use-case';
 import { CreateTaskUseCase } from '../../../application/task/use-cases/create/create-task.use-case';

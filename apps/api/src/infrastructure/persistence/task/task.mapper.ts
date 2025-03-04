@@ -12,8 +12,8 @@ import { TaskWithOwnerAndAssignees, GetAssignedTaskDto } from './task-orm.dtos';
 export class TaskMapper {
   public static toDomain(t: TaskWithOwnerAndAssignees): Task {
     const deadline = Deadline.create(t.deadline)._unsafeUnwrap();
-    const priority = new TaskPriority(t.priority as TaskPriorities);
-    const status = new TaskStatus(t.status as TaskStatuses);
+    const priority = TaskPriority.create(t.priority as TaskPriorities);
+    const status = TaskStatus.create(t.status as TaskStatuses);
     const owner = UserMapper.toDomainWithoutRole(t.owner);
 
     const assignees: User[] = t.assignees.map((a) => UserMapper.toDomainWithoutRole(a.user));

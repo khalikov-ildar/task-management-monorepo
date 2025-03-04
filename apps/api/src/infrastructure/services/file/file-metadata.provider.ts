@@ -1,6 +1,6 @@
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Injectable, Inject } from '@nestjs/common';
-import { IFileMetadataProvider, FileDetails } from 'apps/api/src/application/file/services/i-file-metadata.provider';
+import { IFileMetadataProvider, FileDetails } from '../../../application/file/services/i-file-metadata.provider';
 
 @Injectable()
 export class FileMetadataProvider implements IFileMetadataProvider {

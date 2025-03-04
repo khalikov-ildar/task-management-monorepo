@@ -1,8 +1,8 @@
-import { Global, Module } from '@nestjs/common';
+import { Global, Module, ShutdownSignal } from '@nestjs/common';
 import { ICurrentUserProvider } from '../../../application/common/services/i-current-user.provider';
 import { ClientProxy, ClientProxyFactory, Transport } from '@nestjs/microservices';
 import { IEventPublisher } from '../../../application/common/services/i-event-publisher';
-import { ILogger } from '../../../application/common/services/i-logger';
+import { ILogger } from '@app/shared';
 import { ITransactionManager } from '../../../application/common/services/i-transaction.manager';
 import { IUuidProvider } from '../../../application/common/services/i-uuid.provider';
 import { PrismaTransactionManager } from '../../common/persistence/prisma-transaction.manager';
@@ -26,7 +26,7 @@ import { ConfigService } from '@nestjs/config';
     registerImplementation(IUuidProvider, UuidProvider),
     {
       provide: RmqClientInjectionToken,
-      useFactory: (config: ConfigService) => {
+      useFactory: (config: ConfigService, logger: ILogger) => {
         try {
           const rmq_url = config.getOrThrow('RMQ_URL');
           const rmq_queue = config.getOrThrow('RMQ_QUEUE');
@@ -39,12 +39,12 @@ import { ConfigService } from '@nestjs/config';
             },
           });
         } catch (e) {
-          console.error('FATAL: Error creating RMQ client.  Application cannot start.', e);
+          logger.logFatal('Failed to initialize the RmqClientProxy', { context: CommonModule.name }, e);
 
-          process.exit(1);
+          process.kill(process.pid, ShutdownSignal.SIGTERM);
         }
       },
-      inject: [ConfigService],
+      inject: [ConfigService, ILogger],
     },
     {
       provide: IEventPublisher,

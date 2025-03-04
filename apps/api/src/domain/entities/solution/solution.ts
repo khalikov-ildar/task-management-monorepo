@@ -20,7 +20,7 @@ export class Solution {
     updatedAt?: Date,
     id?: UUID,
   ) {
-    this.status = status ?? new SolutionStatus('pending');
+    this.status = status ?? SolutionStatus.create('pending');
     this.additionalDetails = additionalDetails ?? undefined;
     this.createdAt = createdAt ?? new Date();
     this.updatedAt = updatedAt ?? new Date();
@@ -28,7 +28,7 @@ export class Solution {
   }
 
   markAsReviewed(): void {
-    this.status = new SolutionStatus('reviewed');
+    this.status = SolutionStatus.create('reviewed');
     this.updatedAt = new Date();
   }
 }

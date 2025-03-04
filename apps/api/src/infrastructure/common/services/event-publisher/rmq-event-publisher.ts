@@ -1,5 +1,5 @@
-import { IEvent } from '@app/contracts';
-import { IEventPublisher } from 'apps/api/src/application/common/services/i-event-publisher';
+import { IEvent, IEventPayload } from '@app/contracts';
+import { IEventPublisher } from '../../../../application/common/services/i-event-publisher';
 import { AlsProvider } from '../async-local-storage/als.provider';
 import { ClientProxy, RmqRecordBuilder } from '@nestjs/microservices';
 import { lastValueFrom } from 'rxjs';
@@ -12,7 +12,7 @@ export class RmqEventPublisher implements IEventPublisher {
     private readonly alsProvider: AlsProvider,
   ) {}
 
-  async publish(event: IEvent): Promise<void> {
+  async publish(event: IEvent<IEventPayload>): Promise<void> {
     const traceId = this.alsProvider.getValue('traceId');
     const record = new RmqRecordBuilder(event.payload)
       .setOptions({

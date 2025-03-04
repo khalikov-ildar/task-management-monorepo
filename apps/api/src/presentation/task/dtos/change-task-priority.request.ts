@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { TaskPriorities } from 'apps/api/src/domain/value-objects/task-priority';
+import { TaskPriorities } from '../../../domain/value-objects/task-priority';
 import { IsIn } from 'class-validator';
 import { prioritiesList } from './create-task.request';
 

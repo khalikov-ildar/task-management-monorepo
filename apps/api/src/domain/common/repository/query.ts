@@ -1,14 +1,30 @@
-export class Query<TEntity, TFilterBy extends keyof TEntity = keyof TEntity> {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export abstract class Query<TEntity> {
   public readonly pageNumber: number;
-  protected constructor(
-    public readonly pageSize: number,
-    pageNumber?: number,
-    public readonly filterBy?: Filter<TEntity, TFilterBy>,
-    public readonly sortBy?: string,
-    public readonly sortAscending: boolean = true,
-  ) {
-    this.pageNumber = pageNumber || 1;
+  public readonly pageSize: number;
+  protected constructor(pageSize?: number, pageNumber?: number) {
+    let finalPageSize = 20;
+    let finalPageNumber = 1;
+
+    if (pageSize !== undefined) {
+      finalPageSize = pageSize;
+    }
+
+    if (finalPageSize < 10) {
+      finalPageSize = 10;
+    } else if (finalPageSize > 50) {
+      finalPageSize = 50;
+    }
+
+    if (pageNumber !== undefined) {
+      finalPageNumber = pageNumber;
+    }
+
+    if (finalPageNumber < 1) {
+      finalPageNumber = 1;
+    }
+
+    this.pageSize = finalPageSize;
+    this.pageNumber = finalPageNumber;
   }
 }
-
-export type Filter<TObject, TKey extends keyof TObject = keyof TObject> = Record<TKey, any>;

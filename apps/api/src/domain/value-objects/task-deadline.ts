@@ -5,9 +5,9 @@ import { CustomError } from '../common/error/custom-error';
 export class Deadline {
   private constructor(public readonly value: Date) {}
 
-  public static create(value: Date, dateNowValue: number = Date.now()): Result<Deadline, CustomError> {
+  public static create(value: Date): Result<Deadline, CustomError> {
     const twoHours = 1000 * 60 * 60 * 2;
-    const twoHoursFromNow = (dateNowValue || Date.now()) + twoHours;
+    const twoHoursFromNow = Date.now() + twoHours;
 
     if (value.getTime() <= twoHoursFromNow) {
       return err(DeadlineErrors.mustBeAtLeastTwoHoursFromNow());

@@ -8,20 +8,25 @@ import { randomUUID, UUID } from 'node:crypto';
 import { Solution } from '../solution/solution';
 import { Deadline } from '../../value-objects/task-deadline';
 import { User } from '../user/user';
+import { TaskState } from './state/task.state';
+import { TaskStateFactory } from './state/task-state.factory';
+import { TaskExpiredState } from './state/task.expired-state';
 
 export class Task {
-  private static readonly minAssigneesCount: number = 1;
-  private static readonly maxAssigneesCount: number = 10;
+  public static readonly minAssigneesCount: number = 1;
+  public static readonly maxAssigneesCount: number = 10;
   public readonly id: UUID;
   public changedAt: Date;
   public solutions: Solution[];
+
+  private state: TaskState;
 
   private constructor(
     public title: string,
     public description: string,
     public priority: TaskPriority,
     public deadline: Deadline,
-    public status: TaskStatus,
+    status: TaskStatus,
     public owner: User,
     public assignees: User[],
     id?: UUID,
@@ -30,7 +35,12 @@ export class Task {
   ) {
     this.id = id ?? randomUUID();
     this.changedAt = changedAt ?? new Date();
-    this.solutions = solutions ?? undefined;
+    this.solutions = solutions ?? [];
+    this.state = TaskStateFactory.create(status);
+  }
+
+  get status(): TaskStatus {
+    return this.state.getStatus();
   }
 
   public static create(
@@ -41,64 +51,55 @@ export class Task {
     status: TaskStatus,
     owner: User,
     assignees: User[],
-    solutions: Solution[],
+    solutions?: Solution[],
     id?: UUID,
     changedAt?: Date,
   ): Result<Task, CustomError> {
-    if (assignees.length < this.minAssigneesCount || assignees.length > this.maxAssigneesCount) {
+    if (assignees.length < Task.minAssigneesCount || assignees.length > Task.maxAssigneesCount) {
       return err(TaskErrors.assigneesCountMustBeInRange(this.minAssigneesCount, this.maxAssigneesCount, assignees.length));
     }
-
     return ok(new Task(title, description, priority, deadline, status, owner, assignees, id, changedAt, solutions));
   }
 
   public markAsCompleted(): Result<void, CustomError> {
-    if (this.status.value !== 'pending') {
-      return err(TaskErrors.taskStatusIsNotPending());
-    }
-
-    if (this.isExpired()) {
-      this.status = new TaskStatus('expired');
+    if (Task.isExpired(this.deadline)) {
+      this.state = new TaskExpiredState();
       this.changedAt = new Date();
-      return err(TaskErrors.taskIsExpired());
     }
 
-    this.status = new TaskStatus('on-review');
-    this.changedAt = new Date();
-
-    return ok(undefined);
+    return this.state.markAsCompleted().match(
+      (state) => {
+        this.state = state;
+        this.changedAt = new Date();
+        return ok(undefined);
+      },
+      (e) => err(e),
+    );
   }
 
   public evaluateCompletion(review: Review): Result<void, CustomError> {
-    if (this.status.value !== 'on-review') {
-      return err(TaskErrors.taskStatusIsNotOnReview());
-    }
-
-    if (review.status.value === 'accepted') {
-      const approvedStatus = new TaskStatus('approved');
-      this.status = approvedStatus;
-    } else {
-      const pendingStatus = new TaskStatus('pending');
-      this.status = pendingStatus;
-    }
-
-    this.changedAt = new Date();
-    return ok(undefined);
-  }
-
-  public isExpired(): boolean {
-    if (Date.now() >= this.deadline.value.getTime()) {
-      return true;
-    }
-    return false;
+    return this.state.evaluateCompletion(review).match(
+      (state) => {
+        this.state = state;
+        this.changedAt = new Date();
+        return ok(undefined);
+      },
+      (e) => err(e),
+    );
   }
 
   public changePriority(priority: TaskPriority): Result<void, CustomError> {
-    if (this.status.value !== 'pending') {
-      return err(TaskErrors.taskPriorityCanBeChangedOnlyOnPendingTasks(this.status.value));
-    }
-    this.priority = priority;
-    this.changedAt = new Date();
-    return ok(undefined);
+    return this.state.changePriority().match(
+      () => {
+        this.priority = priority;
+        this.changedAt = new Date();
+        return ok(undefined);
+      },
+      (e) => err(e),
+    );
+  }
+
+  public static isExpired(deadline: Deadline): boolean {
+    return Date.now() >= deadline.value.getTime();
   }
 }

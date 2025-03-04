@@ -10,6 +10,8 @@ import { UserModule } from '../infrastructure/framework/modules/user.module';
 import { AuthModule } from '../infrastructure/framework/modules/auth.module';
 import { CacheModule } from '@nestjs/cache-manager';
 import { TaskModule } from '../infrastructure/framework/modules/task.module';
+import { APP_INTERCEPTOR } from '@nestjs/core';
+import { RequestLatencyLoggerInterceptor } from '../infrastructure/common/inteceptors/request-latency-logger.interceptor';
 
 @Module({
   imports: [
@@ -20,6 +22,7 @@ import { TaskModule } from '../infrastructure/framework/modules/task.module';
     AuthModule,
     TaskModule,
   ],
+  providers: [{ provide: APP_INTERCEPTOR, useClass: RequestLatencyLoggerInterceptor }],
 })
 export class AppModule implements NestModule {
   constructor(private readonly als: AlsProvider) {}

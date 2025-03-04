@@ -14,10 +14,11 @@ import { ITransactionManager } from '../../../common/services/i-transaction.mana
 import { ReviewTaskCommand } from './review-task.command';
 import { ReviewCreatedResponse } from '../../dtos/review-created.response';
 import { SolutionErrors } from '../../../../domain/errors/solution/solution-errors';
-import { ILogger } from '../../../common/services/i-logger';
+import { ILogger } from '@app/shared';
 import { UUID } from 'node:crypto';
-import { UnexpectedError } from '../../../common/errors/unexpected-error';
-import { Solution } from 'apps/api/src/domain/entities/solution/solution';
+import { UnexpectedError } from '../../../../domain/common/error/unexpected-error';
+import { Solution } from '../../../../domain/entities/solution/solution';
+import { ContextualLogger } from '../../../common/services/contextual-logger';
 
 export class ReviewTaskUseCase implements IUseCase<ReviewTaskCommand, ReviewCreatedResponse> {
   constructor(
@@ -27,15 +28,16 @@ export class ReviewTaskUseCase implements IUseCase<ReviewTaskCommand, ReviewCrea
     private readonly taskRepository: ITaskRepository,
     private readonly reviewRepository: IReviewRepository,
     private readonly transactionManager: ITransactionManager,
-    private readonly logger: ILogger,
+    private readonly _genericLogger: ILogger,
   ) {}
 
-  async execute(request: ReviewTaskCommand): Promise<Result<ReviewCreatedResponse, CustomError>> {
-    const context = ReviewTaskUseCase.name;
-    const userDetails = this.currentUserProvider.getCurrentUserDetails();
-    this.logger.logInfo('Attempt to create review', { context });
+  private readonly logger = new ContextualLogger(ReviewTaskUseCase.name, this._genericLogger);
 
-    const userFetchResult = await this.handleUserFetch(userDetails.userId, context);
+  async execute(request: ReviewTaskCommand): Promise<Result<ReviewCreatedResponse, CustomError>> {
+    const userDetails = this.currentUserProvider.getCurrentUserDetails();
+    this.logger.logInfo('Attempt to create review', {});
+
+    const userFetchResult = await this.handleUserFetch(userDetails.userId);
 
     if (userFetchResult.isErr()) {
       return err(userFetchResult.error);
@@ -43,7 +45,7 @@ export class ReviewTaskUseCase implements IUseCase<ReviewTaskCommand, ReviewCrea
 
     const user = userFetchResult.value;
 
-    const solutionFetchResult = await this.handleSolutionFetch(request.solutionId, context);
+    const solutionFetchResult = await this.handleSolutionFetch(request.solutionId);
 
     if (solutionFetchResult.isErr()) {
       return err(solutionFetchResult.error);
@@ -51,7 +53,7 @@ export class ReviewTaskUseCase implements IUseCase<ReviewTaskCommand, ReviewCrea
 
     const solution = solutionFetchResult.value;
 
-    const reviewStatus = new ReviewStatus(request.status);
+    const reviewStatus = ReviewStatus.create(request.status);
 
     const reviewCreationResult = Review.create(solution, user, reviewStatus, request.feedback);
 
@@ -73,7 +75,7 @@ export class ReviewTaskUseCase implements IUseCase<ReviewTaskCommand, ReviewCrea
 
     try {
       await this.transactionManager.execute(async (tx) => {
-        this.logger.logInfo('Starting transaction for review creation', { context, solutionId: solution.id, taskId: task.id });
+        this.logger.logInfo('Starting transaction for review creation', { solutionId: solution.id, taskId: task.id });
         const saveSolutionChanges = this.solutionRepository.updateStatus(solution, tx);
         const saveTaskChanges = this.taskRepository.updateStatus(task, tx);
         const createReview = this.reviewRepository.create(review, tx);
@@ -81,13 +83,13 @@ export class ReviewTaskUseCase implements IUseCase<ReviewTaskCommand, ReviewCrea
         try {
           await Promise.all([saveSolutionChanges, saveTaskChanges, createReview]);
         } catch (e) {
-          this.logger.logError('An error occurred while trying to save review', { context }, e);
+          this.logger.logError('An error occurred while trying to save review', {}, e);
           throw e;
         }
 
-        this.logger.logInfo('Transaction finished successfully', { context, solutionId: solution.id, taskId: task.id });
+        this.logger.logInfo('Transaction finished successfully', { solutionId: solution.id, taskId: task.id });
       });
-      this.logger.logInfo('Review created successfully', { context, reviewId: review.id, solutionId: solution.id, taskId: task.id });
+      this.logger.logInfo('Review created successfully', { reviewId: review.id, solutionId: solution.id, taskId: task.id });
 
       return ok(ReviewCreatedResponse.fromDomain(review));
     } catch (e) {
@@ -95,12 +97,12 @@ export class ReviewTaskUseCase implements IUseCase<ReviewTaskCommand, ReviewCrea
     }
   }
 
-  private async handleUserFetch(userId: UUID, context: string): Promise<Result<User, CustomError>> {
+  private async handleUserFetch(userId: UUID): Promise<Result<User, CustomError>> {
     let user: User | null;
     try {
       user = await this.userRepository.getById(userId);
     } catch (e) {
-      this.logger.logError('An error occurred while trying to fetch user', { context }, e);
+      this.logger.logError('An error occurred while trying to fetch user', {}, e);
       return err(UnexpectedError.create());
     }
     if (!user) {
@@ -110,12 +112,12 @@ export class ReviewTaskUseCase implements IUseCase<ReviewTaskCommand, ReviewCrea
     return ok(user);
   }
 
-  private async handleSolutionFetch(solutionId: UUID, context: string): Promise<Result<Solution, CustomError>> {
+  private async handleSolutionFetch(solutionId: UUID): Promise<Result<Solution, CustomError>> {
     let solution: Solution | null;
     try {
       solution = await this.solutionRepository.getById(solutionId);
     } catch (e) {
-      this.logger.logError('An error occurred while trying to fetch solution', { context }, e);
+      this.logger.logError('An error occurred while trying to fetch solution', {}, e);
       return err(UnexpectedError.create());
     }
 

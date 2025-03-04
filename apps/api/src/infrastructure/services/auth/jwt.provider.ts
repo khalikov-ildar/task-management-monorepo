@@ -8,8 +8,8 @@ import { TokenType } from '../../../application/auth/dtos/token-type';
 import { IAuthenticationTokenProvider } from '../../../application/auth/services/i-auth-token.provider';
 import { IPasswordTokenProvider } from '../../../application/auth/services/i-password-token.provider';
 import { UUID } from 'node:crypto';
-import { IEmailTokenProvider } from 'apps/api/src/application/auth/services/i-email-token.provider';
-import { EmailTokenType } from 'apps/api/src/application/auth/dtos/email-token-type';
+import { IEmailTokenProvider } from '../../../application/auth/services/i-email-token.provider';
+import { EmailTokenType } from '../../../application/auth/dtos/email-token-type';
 
 @Injectable()
 export class JwtTokenProvider implements IAuthenticationTokenProvider, IPasswordTokenProvider, IEmailTokenProvider {

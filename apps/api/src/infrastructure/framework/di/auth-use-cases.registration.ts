@@ -9,7 +9,7 @@ import { PasswordResetUseCase } from '../../../application/auth/use-cases/passwo
 import { RefreshTokensUseCase } from '../../../application/auth/use-cases/refresh/refresh-tokens.use-case';
 import { RegisterUserUseCase } from '../../../application/auth/use-cases/register/register-user.use-case';
 import { ICurrentUserProvider } from '../../../application/common/services/i-current-user.provider';
-import { ILogger } from '../../../application/common/services/i-logger';
+import { ILogger } from '@app/shared';
 import { ITransactionManager } from '../../../application/common/services/i-transaction.manager';
 import { IPasswordTokenRepository } from '../../../domain/repositories/tokens/i-password-token.repository';
 import { IRefreshTokenRepository } from '../../../domain/repositories/tokens/i-refresh-token.repository';

@@ -1,5 +1,5 @@
 import { PasswordResetToken as OrmToken } from '@prisma/client';
-import { PasswordResetToken } from 'apps/api/src/domain/entities/tokens/password-reset-token';
+import { PasswordResetToken } from '../../../domain/entities/tokens/password-reset-token';
 import { UUID } from 'node:crypto';
 
 export class PasswordResetTokenMapper {

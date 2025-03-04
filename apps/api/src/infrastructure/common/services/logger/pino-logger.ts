@@ -1,5 +1,5 @@
 import { Injectable, LoggerService, LogLevel } from '@nestjs/common';
-import { ILogger } from '../../../../application/common/services/i-logger';
+import { ILogger } from '@app/shared';
 import pino from 'pino';
 import { AlsProvider } from '../async-local-storage/als.provider';
 
@@ -19,13 +19,15 @@ export class PinoLogger implements LoggerService, ILogger {
     error?: Error,
   ): void {
     if (typeof context === 'string') {
-      const logObject = error ? { context, stack: error.stack } : { context };
+      const logObject = error ? { context, errorStack: error.stack, errorName: error.name, errorMessage: error.message } : { context };
       this.logger[level](logObject, message);
     } else {
       const traceId = this.alsProvider?.getValue('traceId');
       const ip = this.alsProvider?.getValue('maskedIp');
       const path = this.alsProvider?.getValue('path');
-      const logObject = error ? { traceId, ip, path, ...context, stack: error.stack } : { traceId, ip, path, ...context };
+      const logObject = error
+        ? { traceId, ip, path, ...context, errorStack: error.stack, errorName: error.name, errorMessage: error.message }
+        : { traceId, ip, path, ...context };
       this.logger[level](logObject, message);
     }
   }

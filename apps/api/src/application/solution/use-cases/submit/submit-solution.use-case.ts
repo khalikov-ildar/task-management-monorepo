@@ -8,14 +8,15 @@ import { ISolutionRepository } from '../../../../domain/repositories/solution/i-
 import { ITaskRepository } from '../../../../domain/repositories/task/i-task.repository';
 import { UUID } from 'node:crypto';
 import { Result, err, ok } from 'neverthrow';
-import { UnexpectedError } from '../../../common/errors/unexpected-error';
+import { UnexpectedError } from '../../../../domain/common/error/unexpected-error';
 import { IUseCase } from '../../../common/i-use-case';
 import { ICurrentUserProvider } from '../../../common/services/i-current-user.provider';
-import { ILogger } from '../../../common/services/i-logger';
+import { ILogger } from '@app/shared';
 import { ITransactionManager } from '../../../common/services/i-transaction.manager';
 import { SubmitSolutionCommand } from './submit-solution.command';
 import { SolutionCreatedResponse } from '../../dtos/solution-created.response';
 import { FileErrors } from '../../../../domain/errors/file/file-errors';
+import { ContextualLogger } from '../../../common/services/contextual-logger';
 
 export class SubmitSolutionUseCase implements IUseCase<SubmitSolutionCommand, SolutionCreatedResponse> {
   constructor(
@@ -24,23 +25,24 @@ export class SubmitSolutionUseCase implements IUseCase<SubmitSolutionCommand, So
     private readonly taskRepository: ITaskRepository,
     private readonly solutionRepository: ISolutionRepository,
     private readonly transactionManager: ITransactionManager,
-    private readonly logger: ILogger,
+    private readonly _genericLogger: ILogger,
   ) {}
 
+  private readonly logger = new ContextualLogger(SubmitSolutionUseCase.name, this._genericLogger);
+
   async execute(request: SubmitSolutionCommand): Promise<Result<SolutionCreatedResponse, CustomError>> {
-    const context = SubmitSolutionUseCase.name;
     const { userId } = this.currentUserProvider.getCurrentUserDetails();
 
-    this.logger.logInfo('Attempt to submit the solution', { context, userId });
+    this.logger.logInfo('Attempt to submit the solution', { userId });
 
-    const fileFetchingResult = await this.handleFileFetching(request.fileId, context);
+    const fileFetchingResult = await this.handleFileFetching(request.fileId);
     if (fileFetchingResult.isErr()) {
       return err(fileFetchingResult.error);
     }
 
     const file = fileFetchingResult.value;
 
-    const taskFetchingResult = await this.handleTaskFetching(request.taskId, context);
+    const taskFetchingResult = await this.handleTaskFetching(request.taskId);
     if (taskFetchingResult.isErr()) {
       return err(taskFetchingResult.error);
     }
@@ -54,7 +56,7 @@ export class SubmitSolutionUseCase implements IUseCase<SubmitSolutionCommand, So
         try {
           await this.taskRepository.updateStatus(task);
         } catch (e) {
-          this.logger.logError('An error occurred while trying to update status of task', { context, taskId: task.id });
+          this.logger.logError('An error occurred while trying to update status of task', { taskId: task.id });
           return err(UnexpectedError.create());
         }
       }
@@ -65,7 +67,7 @@ export class SubmitSolutionUseCase implements IUseCase<SubmitSolutionCommand, So
 
     try {
       await this.transactionManager.execute(async (tx) => {
-        this.logger.logInfo('Transaction for updating task status and saving soluiton started', { context });
+        this.logger.logInfo('Transaction for updating task status and saving soluiton started', {});
 
         const updateStatus = this.taskRepository.updateStatus(task, tx);
         const createSolution = this.solutionRepository.create(solution, tx);
@@ -73,47 +75,49 @@ export class SubmitSolutionUseCase implements IUseCase<SubmitSolutionCommand, So
         try {
           await Promise.all([updateStatus, createSolution]);
         } catch (e) {
-          this.logger.logError('An error occurred while trying to update status and save solution', { context, taskId: task.id }, e);
+          this.logger.logError('An error occurred while trying to update status and save solution', { taskId: task.id }, e);
           throw e;
         }
 
-        this.logger.logInfo('Transaction successfully completed', { context });
+        this.logger.logInfo('Transaction successfully completed', {});
       });
     } catch (e) {
       return err(UnexpectedError.create());
     }
 
+    this.logger.logInfo('Solution successfully created', { solutionId: solution.id });
+
     return ok(SolutionCreatedResponse.fromDomain(solution));
   }
 
-  private async handleFileFetching(fileId: UUID, context: string): Promise<Result<File, CustomError>> {
+  private async handleFileFetching(fileId: UUID): Promise<Result<File, CustomError>> {
     let file: File | null;
     try {
       file = await this.fileRepository.getById(fileId);
     } catch (e) {
-      this.logger.logError('An error occurred while trying to fetch the file', { context, fileId }, e);
+      this.logger.logError('An error occurred while trying to fetch the file', { fileId }, e);
       return err(UnexpectedError.create());
     }
 
     if (!file) {
-      this.logger.logInfo('File was not found', { context, fileId });
+      this.logger.logInfo('File was not found', { fileId });
       return err(FileErrors.NotFound(fileId));
     }
 
     return ok(file);
   }
 
-  private async handleTaskFetching(taskId: UUID, context: string): Promise<Result<Task, CustomError>> {
+  private async handleTaskFetching(taskId: UUID): Promise<Result<Task, CustomError>> {
     let task: Task | null;
     try {
       task = await this.taskRepository.getById(taskId);
     } catch (e) {
-      this.logger.logError('An error occurred while trying to fetch task', { context, taskId }, e);
+      this.logger.logError('An error occurred while trying to fetch task', { taskId }, e);
       return err(UnexpectedError.create());
     }
 
     if (!task) {
-      this.logger.logInfo('Task was not found', { context, taskId });
+      this.logger.logInfo('Task was not found', { taskId });
       return err(TaskErrors.taskNotFound(taskId));
     }
 

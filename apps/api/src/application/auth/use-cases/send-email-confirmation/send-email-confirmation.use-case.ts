@@ -3,10 +3,10 @@ import { err, ok, Result } from 'neverthrow';
 import { IUseCase } from '../../../common/i-use-case';
 import { SendEmailConfirmationCommand } from './send-email-confirmation.command';
 import { IUserRepository } from '../../../../domain/repositories/user/i-user.repository';
-import { ILogger } from '../../../common/services/i-logger';
+import { ILogger } from '@app/shared';
 import { maskEmail } from '../../../common/utils/mask-email';
 import { User } from '../../../../domain/entities/user/user';
-import { UnexpectedError } from '../../../common/errors/unexpected-error';
+import { UnexpectedError } from '../../../../domain/common/error/unexpected-error';
 import { IEmailTokenProvider } from '../../services/i-email-token.provider';
 import { IEmailTokenRepository } from '../../../../domain/repositories/tokens/i-email-token.repository';
 import { IEventPublisher } from '../../../common/services/i-event-publisher';
@@ -14,6 +14,7 @@ import { ITransactionManager } from '../../../common/services/i-transaction.mana
 import { UUID } from 'node:crypto';
 import { EmailVerificationToken } from '../../../../domain/entities/tokens/email-verification-token';
 import { createEmailConfirmationEvent } from '@app/contracts';
+import { ContextualLogger } from '../../../common/services/contextual-logger';
 
 export class SendEmailConfirmationUseCase implements IUseCase<SendEmailConfirmationCommand, void> {
   constructor(
@@ -22,22 +23,23 @@ export class SendEmailConfirmationUseCase implements IUseCase<SendEmailConfirmat
     private readonly emailTokenRepository: IEmailTokenRepository,
     private readonly eventPublisher: IEventPublisher,
     private readonly transactionManager: ITransactionManager,
-    private readonly logger: ILogger,
+    private readonly _genericLogger: ILogger,
   ) {}
 
-  async execute(request: SendEmailConfirmationCommand): Promise<Result<void, CustomError>> {
-    const context = SendEmailConfirmationUseCase.name;
-    const maskedEmail = maskEmail(request.email);
-    this.logger.logInfo('Attempt to request email confirmation', { context, email: maskedEmail });
+  private readonly logger = new ContextualLogger(SendEmailConfirmationUseCase.name, this._genericLogger);
 
-    const userFetchingResult = await this.handleUserFetching(request.email, context);
+  async execute(request: SendEmailConfirmationCommand): Promise<Result<void, CustomError>> {
+    const maskedEmail = maskEmail(request.email);
+    this.logger.logInfo('Attempt to request email confirmation', { email: maskedEmail });
+
+    const userFetchingResult = await this.handleUserFetching(request.email);
     if (userFetchingResult.isErr()) {
       return err(userFetchingResult.error);
     }
     const user = userFetchingResult.value;
 
     if (!user) {
-      this.logger.logInfo('Attempt to request verification email for non-existent user detected', { context });
+      this.logger.logInfo('Attempt to request verification email for non-existent user detected', {});
       return ok(undefined);
     }
 
@@ -45,7 +47,7 @@ export class SendEmailConfirmationUseCase implements IUseCase<SendEmailConfirmat
       return ok(undefined);
     }
 
-    const emailTokenFetchingResult = await this.handleEmailTokenFetching(request.email, context);
+    const emailTokenFetchingResult = await this.handleEmailTokenFetching(request.email);
     if (emailTokenFetchingResult.isErr()) {
       return err(emailTokenFetchingResult.error);
     }
@@ -59,7 +61,7 @@ export class SendEmailConfirmationUseCase implements IUseCase<SendEmailConfirmat
           await this.eventPublisher.publish(createEmailConfirmationEvent(user.id, user.email, existingEmailToken.id));
           return ok(undefined);
         } catch (e) {
-          this.logger.logError('An error occured while trying to publish email confirmation event', { context }, e);
+          this.logger.logError('An error occured while trying to publish email confirmation event', {}, e);
           return err(UnexpectedError.create());
         }
       }
@@ -67,42 +69,42 @@ export class SendEmailConfirmationUseCase implements IUseCase<SendEmailConfirmat
 
     try {
       await this.transactionManager.execute(async (tx) => {
-        this.logger.logInfo('Started transaction for email token generation', { context });
+        this.logger.logInfo('Started transaction for email token generation', {});
 
         try {
           await this.handleEventTokenGeneration(user.email, user.id, tx);
         } catch (e) {
-          this.logger.logError('An error occurred while trying to generate and save the email token', { context }, e);
+          this.logger.logError('An error occurred while trying to generate and save the email token', {}, e);
           throw e;
         }
 
-        this.logger.logInfo('Successfully finished transaction', { context });
+        this.logger.logInfo('Successfully finished transaction', {});
       });
     } catch (e) {
       return err(UnexpectedError.create());
     }
 
-    this.logger.logInfo('Email confirmation request handled successfully', { context, email: maskedEmail });
+    this.logger.logInfo('Email confirmation request handled successfully', { email: maskedEmail });
 
     return ok(undefined);
   }
 
-  private async handleUserFetching(email: string, context: string): Promise<Result<User | null, CustomError>> {
+  private async handleUserFetching(email: string): Promise<Result<User | null, CustomError>> {
     try {
       const user = await this.userRepository.getByEmail(email);
       return ok(user);
     } catch (e) {
-      this.logger.logError('An error occurred while trying to fetch user', { context }, e);
+      this.logger.logError('An error occurred while trying to fetch user', {}, e);
       return err(UnexpectedError.create());
     }
   }
 
-  private async handleEmailTokenFetching(email: string, context: string): Promise<Result<EmailVerificationToken | null, CustomError>> {
+  private async handleEmailTokenFetching(email: string): Promise<Result<EmailVerificationToken | null, CustomError>> {
     try {
       const emailToken = await this.emailTokenRepository.getByEmail(email);
       return ok(emailToken);
     } catch (e) {
-      this.logger.logError('An error occured while trying to fetch email token', { context }, e);
+      this.logger.logError('An error occured while trying to fetch email token', {}, e);
       return err(UnexpectedError.create());
     }
   }

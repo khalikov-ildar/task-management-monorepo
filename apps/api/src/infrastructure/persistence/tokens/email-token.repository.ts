@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { EmailVerificationToken } from 'apps/api/src/domain/entities/tokens/email-verification-token';
-import { IEmailTokenRepository } from 'apps/api/src/domain/repositories/tokens/i-email-token.repository';
+import { EmailVerificationToken } from '../../../domain/entities/tokens/email-verification-token';
+import { IEmailTokenRepository } from '../../../domain/repositories/tokens/i-email-token.repository';
 import { UUID } from 'crypto';
 import { PrismaService } from '../../common/persistence/prisma.service';
 import { EmailTokenMapper } from './email-token.mapper';

@@ -1,8 +1,8 @@
 import { Injectable, CanActivate, ExecutionContext, UnauthorizedException } from '@nestjs/common';
-import { TokenType } from 'apps/api/src/application/auth/dtos/token-type';
-import { IAuthenticationTokenProvider } from 'apps/api/src/application/auth/services/i-auth-token.provider';
-import { ILogger } from 'apps/api/src/application/common/services/i-logger';
-import { ICookieManager } from 'apps/api/src/presentation/common/services/cookie-manager/i-cookie-manager';
+import { TokenType } from '../../../application/auth/dtos/token-type';
+import { IAuthenticationTokenProvider } from '../../../application/auth/services/i-auth-token.provider';
+import { ILogger } from '@app/shared';
+import { ICookieManager } from '../../../presentation/common/services/cookie-manager/i-cookie-manager';
 import { AlsProvider } from '../../common/services/async-local-storage/als.provider';
 import { REFRESH_TOKEN_COOKIE_KEY } from '../constants/auth.constants';
 import { Request } from 'express';

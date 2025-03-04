@@ -2,7 +2,6 @@ import { DynamicModule, Module, Provider } from '@nestjs/common';
 import { MailerModuleOptions, MailerOptions } from './interfaces/mailer-options.interface';
 import { MailerService } from './mailer.service';
 import { MailerController } from './mailer.controller';
-import { MailerProcessor } from './mailer.processor';
 
 @Module({})
 export class MailerModule {
@@ -23,9 +22,8 @@ export class MailerModule {
           useFactory: (mailerOptions: MailerOptions) => new MailerService(mailerOptions),
           inject: ['MAILER_OPTIONS'],
         },
-        MailerProcessor,
       ],
-      exports: [MailerService, MailerProcessor],
+      exports: [MailerService],
       controllers: [MailerController],
     };
   }

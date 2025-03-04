@@ -6,7 +6,7 @@ import { IRoleRepository } from '../../../../domain/repositories/user/i-role.rep
 import { IUserRepository } from '../../../../domain/repositories/user/i-user.repository';
 import { Result, err, ok } from 'neverthrow';
 import { IUseCase } from '../../../common/i-use-case';
-import { ILogger } from '../../../common/services/i-logger';
+import { ILogger } from '@app/shared';
 import { maskEmail } from '../../../common/utils/mask-email';
 import { SanitizedUser, sanitizeUser } from '../../../common/utils/sanitize-user';
 import { IPasswordHasher } from '../../services/i-password.hasher';
@@ -19,7 +19,8 @@ import { EmailVerificationToken } from '../../../../domain/entities/tokens/email
 import { createEmailConfirmationEvent } from '@app/contracts';
 import { UUID } from 'node:crypto';
 import { Role } from '../../../../domain/entities/user/role/role';
-import { UnexpectedError } from '../../../common/errors/unexpected-error';
+import { UnexpectedError } from '../../../../domain/common/error/unexpected-error';
+import { ContextualLogger } from '../../../common/services/contextual-logger';
 
 export class RegisterUserUseCase implements IUseCase<RegisterUserCommand, SanitizedUser> {
   constructor(
@@ -30,20 +31,21 @@ export class RegisterUserUseCase implements IUseCase<RegisterUserCommand, Saniti
     private readonly emailTokenRepository: IEmailTokenRepository,
     private readonly eventPublisher: IEventPublisher,
     private readonly transactionManager: ITransactionManager,
-    private readonly logger: ILogger,
+    private readonly _genericLogger: ILogger,
   ) {}
 
-  async execute(request: RegisterUserCommand): Promise<Result<SanitizedUser, CustomError>> {
-    const context = RegisterUserUseCase.name;
-    const maskedEmail = maskEmail(request.email);
-    this.logger.logInfo('Attempt to register', { context, email: maskedEmail });
+  private readonly logger = new ContextualLogger(RegisterUserUseCase.name, this._genericLogger);
 
-    const userFetchingResult = await this.handleUserFetching(request.email, context, maskedEmail);
+  async execute(request: RegisterUserCommand): Promise<Result<SanitizedUser, CustomError>> {
+    const maskedEmail = maskEmail(request.email);
+    this.logger.logInfo('Attempt to register', { email: maskedEmail });
+
+    const userFetchingResult = await this.handleUserFetching(request.email, maskedEmail);
     if (userFetchingResult.isErr()) {
       return err(userFetchingResult.error);
     }
 
-    const hashingPasswordAndFetchingRoleResult = await this.handleHashingPasswordAndFetchingRole(request.password, context);
+    const hashingPasswordAndFetchingRoleResult = await this.handleHashingPasswordAndFetchingRole(request.password);
     if (hashingPasswordAndFetchingRoleResult.isErr()) {
       return err(hashingPasswordAndFetchingRoleResult.error);
     }
@@ -54,47 +56,47 @@ export class RegisterUserUseCase implements IUseCase<RegisterUserCommand, Saniti
     try {
       await this.userRepository.save(user);
     } catch (e) {
-      this.logger.logError('An error occurred while trying to save user', { context }, e);
+      this.logger.logError('An error occurred while trying to save user', {}, e);
       return err(UnexpectedError.create());
     }
 
     try {
       await this.transactionManager.execute(async (tx) => {
-        this.logger.logInfo('Started transaction for email token generation', { context });
+        this.logger.logInfo('Started transaction for email token generation', {});
 
         try {
           await this.handleEventTokenGeneration(user.email, user.id, tx);
         } catch (e) {
-          this.logger.logError('An error occurred while trying to generate and save the email token', { context }, e);
+          this.logger.logError('An error occurred while trying to generate and save the email token', {}, e);
           throw e;
         }
 
-        this.logger.logInfo('Successfully finished transaction', { context });
+        this.logger.logInfo('Successfully finished transaction', {});
       });
     } catch (e) {}
 
-    this.logger.logInfo('Successfully registered user', { context, email: maskedEmail });
+    this.logger.logInfo('Successfully registered user', { email: maskedEmail });
 
     return ok(sanitizeUser(user));
   }
 
-  private async handleUserFetching(email: string, context: string, maskedEmail: string): Promise<Result<void, CustomError>> {
+  private async handleUserFetching(email: string, maskedEmail: string): Promise<Result<void, CustomError>> {
     let existingUser: User | null;
 
     try {
       existingUser = await this.userRepository.getByEmail(email);
     } catch (e) {
-      this.logger.logError('An error occurred while trying to fetch the user', { context }, e);
+      this.logger.logError('An error occurred while trying to fetch the user', {}, e);
       return err(UnexpectedError.create());
     }
 
     if (existingUser) {
-      this.logger.logInfo('Attempt to register failed due to existance of user with email', { context, email: maskedEmail });
+      this.logger.logInfo('Attempt to register failed due to existance of user with email', { email: maskedEmail });
       return err(UserErrors.UserAlreadyExists());
     }
   }
 
-  private async handleHashingPasswordAndFetchingRole(password: string, context: string): Promise<Result<[string, Role], CustomError>> {
+  private async handleHashingPasswordAndFetchingRole(password: string): Promise<Result<[string, Role], CustomError>> {
     const hashPassword = this.passwordHasher.hash(password);
     const getRoleId = this.roleRepository.getByName(UserRoles.Member);
 
@@ -104,12 +106,12 @@ export class RegisterUserUseCase implements IUseCase<RegisterUserCommand, Saniti
     try {
       [hashedPassword, role] = await Promise.all([hashPassword, getRoleId]);
     } catch (e) {
-      this.logger.logError('An error occurred while trying to hash password or fetch role', { context }, e);
+      this.logger.logError('An error occurred while trying to hash password or fetch role', {}, e);
       return err(UnexpectedError.create());
     }
 
     if (!role) {
-      this.logger.logError('User role does not exist', { context });
+      this.logger.logError('User role does not exist', {});
       return err(UnexpectedError.create());
     }
 

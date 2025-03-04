@@ -1,4 +1,8 @@
-export interface IEvent {
+import { UUID } from 'node:crypto';
+
+export interface IEvent<T extends IEventPayload> {
   event: string;
-  payload: Record<string, any>;
+  payload: T;
 }
+
+export type IEventPayload = { userId: UUID };

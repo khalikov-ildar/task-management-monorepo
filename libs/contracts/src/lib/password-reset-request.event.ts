@@ -8,14 +8,14 @@ export type PasswordResetRequestEventPayload = {
   tokenId: UUID;
 };
 
-export interface PasswordResetRequestEvent extends IEvent {
+interface PasswordResetRequestEvent extends IEvent<PasswordResetRequestEventPayload> {
   event: typeof PasswordResetRequestEventName;
   payload: PasswordResetRequestEventPayload;
 }
 
 export function createPasswordResetRequestEvent(userId: UUID, userEmail: string, tokenId: UUID): PasswordResetRequestEvent {
   return {
-    event: 'password-reset.requested-event',
+    event: PasswordResetRequestEventName,
     payload: {
       tokenId,
       userEmail,
